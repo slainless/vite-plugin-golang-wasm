@@ -1,5 +1,5 @@
 import { PluginOption, ResolvedConfig } from 'vite'
-import { extname, join } from 'node:path'
+import { basename, extname, join } from 'node:path'
 
 import { WASM_BRIDGE_ID, WASM_EXEC_ID, readFile } from './dependency.js'
 import { createTempDir } from './temp_dir.js'
@@ -89,6 +89,7 @@ export default (config?: Config): PluginOption => {
         if (cfg.command == "build") {
           const refId = this.emitFile({
             type: "asset",
+            name: basename(id, ".go") + ".wasm",
             source: await readFile(cfg, wasmPath)
           })
           replacement = `fetch(import.meta.ROLLUP_FILE_URL_${refId})`
