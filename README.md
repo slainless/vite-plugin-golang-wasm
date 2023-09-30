@@ -109,7 +109,7 @@ export default __default
 
 ## How it works
 
-Essentially, this plugin will transform each "imported" Go file into JS code with the sole purposes of loading WASM code while the actual Go codes are bundled or inlined.
+Essentially, this plugin will transform each "imported" Go file into JS code which only contains codes for loading WASM, while the actual Go codes are bundled or inlined.
 
 Here is an example of math code above transformed into a simple WASM loader:
 
