@@ -1,23 +1,46 @@
 {
-  "name": "golang-wasm",
-  "version": "0.0.1",
-  "description": "A webpack-based configuration to work with wasm using Go.",
-  "main": "src/index.js",
+  "name": "vite-plugin-golang-wasm",
+  "version": "0.1.0",
+  "description": "Vite plugin that handles golang codes, based on Golang-WASM implementations",
+  "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://gitea.teamortix.com/Team-Ortix/golang-wasm"
+    "url": "https://github.com/slainless/vite-plugin-golang-wasm"
   },
   "keywords": [
     "golang",
     "wasm",
-    "modules",
-    "loader",
-    "webpack"
+    "vite-plugin"
   ],
-  "author": "hhhapz, chanbakjsd",
+  "author": "Ahmad Fauzy",
+  "contributors": [
+    {
+      "name": "Hamza Ali"
+    },
+    {
+      "name": "Chan Wen Xu"
+    }
+  ],
   "license": "MIT",
   "dependencies": {
-    "lookpath": "^1.2.0",
-    "webpack": "^5.27.0"
-  }
+    "base64-stream": "^1.0.0",
+    "exit-hook": "^4.0.0"
+  },
+  "devDependencies": {
+    "@tsconfig/node-lts": "^18.12.5",
+    "@types/base64-stream": "^1.0.3",
+    "@types/node": "^20.7.1",
+    "rimraf": "^5.0.5",
+    "rollup": "^3.0.0",
+    "typescript": "^5.2.2",
+    "vite": "^4.0.0"
+  },
+  "peerDependencies": {
+    "vite": "^4.0.0"
+  },
+  "scripts": {
+    "build": "rimraf dist && tsc"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts"
 }

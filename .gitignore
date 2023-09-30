@@ -1,4 +1,2 @@
 node_modules
-.gocache
-wasm_exec.js
-*.wasm
+dist
