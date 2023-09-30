@@ -2,17 +2,19 @@
 
 ## What's this?
 
-An opinionated `vite` plugin to load and run go code as WASM, based on [Golang-WASM](https://github.com/teamortix/golang-wasm)'s implementation.
+An opinionated `vite` plugin to load and run Go code as WASM, based on [Golang-WASM](https://github.com/teamortix/golang-wasm)'s implementation.
+
+Compatible for `vite@^4.0.0`, `rollup@^3.0.0` and Node LTS (equivalent to `node18`, based on [`@tsconfig/node-lts/tsconfig.json`](https://github.com/tsconfig/bases/blob/main/bases/node-lts.json)).
 
 ## Motivation
 
-While looking up library to load Go code in my private project, I stumbled across Golang-WASM project, which is exactly what I'm looking for (shoutout to [teamortix](https://github.com/teamortix) for their great work!). Sadly, they only implemented loader for `webpack` environment, and I can't seems to find any alternative implementation in `vite` or `rollup` environment. Hence, why I created this plugin.
+While I was looking up for a library to load Go code in my private project, I came across `Golang-WASM` project, which is exactly what I'm looking for (shoutout to [teamortix](https://github.com/teamortix) for their great work!). Unfortunately, they have only implemented a loader for `webpack` environment, and I couldn't find any alternative implementations for `vite` or `rollup` environment. Hence, why I created this plugin.
 
 ## Usage
 
-For detailed information regarding the architecture of the bridge and bindings, please refers to [Golang-WASM#JS Interop](https://github.com/teamortix/golang-wasm#js-interop) and [Golang-WASM#How it works](https://github.com/teamortix/golang-wasm#how-it-works).
+For detailed information regarding the architecture of the bridge and bindings, please refer to [Golang-WASM#JS Interop](https://github.com/teamortix/golang-wasm#js-interop) and [Golang-WASM#How it works](https://github.com/teamortix/golang-wasm#how-it-works).
 
-For plugin usage, just import it and then register it `vite` just like usual:
+For plugin usage, simply import and register it to `vite` config just like most plugins:
 
 ```ts
 // ./vite.config.ts
@@ -31,7 +33,7 @@ export default defineConfig({
 })
 ```
 
-Setup go code, for example, a math code:
+Create a Go code, for example, a math code:
 
 ```go
 //./src/math/math.go
@@ -55,7 +57,7 @@ func main() {
 
 ```
 
-Then, import it from anywhere in the source code:
+Then, import it from anywhere in source code:
 
 ```ts
 // ./src/app.tsx
@@ -85,11 +87,24 @@ export const App = component$(() => {
 })
 ```
 
-## How it works?
+#### Typescript Support
 
-Basically, this plugin will transform all go import into js code for wasm loading and bundle or inline the actual go (wasm) code.
+It's actually possible to generate typescript definition from Go source code since the official Go repository already offered [set of tools](https://pkg.go.dev/go) to work with Go source code such as parser, scanner, AST types, etc. However, I don't think I have the time to actually implement that, given the size and scope of the feature.
 
-Here is an example of math code above transformed into a simple wasm loader:
+Instead, each module needs to be defined via a Typescript's declaration file. Reusing math example from above, we can create declaration file for `./math/math.go` file, like this:
+
+```ts
+// ./math/math.go.d.ts
+export default {
+  add(x: number, y: number): Promise<number>
+}
+```
+
+## How it works
+
+Essentially, this plugin will transform each "imported" Go file into JS code with the sole purposes of loading WASM code while the actual Go codes are bundled or inlined.
+
+Here is an example of math code above transformed into a simple WASM loader:
 
 ```ts
 import '/@id/__x00__virtual:wasm_exec'
@@ -101,23 +116,23 @@ const wasm = fetch('data:application/wasm;base64,...').then((r) =>
 export default goWasm(wasm)
 ```
 
-While the actual code are transformed into wasm and bundled (in `build` mode) or inlined (in `serve` mode).
+While the actual code are transformed into WASM and bundled (in `build` mode) or inlined (in `serve` mode).
 
-In `build` mode, URI of the fetch is replaced with:
+In `build` mode, the compiled Go is emitted as asset, returning the reference ID. The reference ID will be used in URI of the fetch to load it:
 
 ```ts
-const wasm = fetch(import.meta.ROLLUP_FILE_URL_...).then(r=>r.arrayBuffer());
+const wasm = fetch(import.meta.ROLLUP_FILE_URL_{REFERENCE_ID}).then(r=>r.arrayBuffer());
 ```
 
 While in `serve` mode, the code is inlined to the fetch instead:
 
 ```ts
-const wasm = fetch(`data:application/wasm;base64,...`).then((r) =>
-  r.arrayBuffer()
+const wasm = fetch(`data:application/wasm;base64,{BASE_64_ENCODED_CODE}`).then(
+  (r) => r.arrayBuffer()
 )
 ```
 
-The loader depends on implementation of `Golang-WASM` both on their JS interop and golang wasm package.
+The loader depends on implementation of `Golang-WASM` both on their JS interop and Golang WASM package.
 
 ## Configuration
 
@@ -125,7 +140,7 @@ https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f1
 
 #### goBinaryPath, wasmExecPath
 
-By default, `goBinaryPath` and `wasmExecPath` will be resolved relative to `process.env.GOROOT` when not set, but will throw error when `GOROOT` is also not set. `GOROOT` needs to be added into OS's environment variables or set locally before running script, for example `GOROOT=/usr/bin/go vite dev`. OR, both these options can be provided to allow direct or custom go binary or `wasm_exec.js` resolving and remove dependency on env vars.
+By default, `goBinaryPath` and `wasmExecPath` will be resolved relative to `process.env.GOROOT` if either of these options are not defined. But an error will be thrown when `GOROOT` is also not set. `GOROOT` needs to be added into OS's environment variables or set locally before running any script, for example `GOROOT=/usr/bin/go vite dev`. Alternatively, both these options can be provided to allow direct or custom `go` binary or `wasm_exec.js` resolving.
 
 For example, `tinygo` and it's `wasm_exec.js` can be used in place of normal `go` binary:
 
@@ -145,13 +160,11 @@ export default defineConfig({
 
 #### goBuildDir, buildGoFile
 
-`goBuildDir` will be resolved to `os.tmpdir/go-wasm-${RANDOM_STRING}`. This option defines the directory where the output and cache of the build should be put in. By default, will create a temporary directory that lives throughout the lifecycle of `vite` process and will be cleaned up when process exiting (either by `SIGINT`, normal exit, error, etc.). However, when this option is provided, it's assumed that end user will be responsible for the directory (from creation until cleanup).
+`goBuildDir` will be resolved to `os.tmpdir/go-wasm-${RANDOM_STRING}`. This option defines the directory where the output and cache of the build should be placed. By default, it will create a temporary directory that persist throughout the lifecycle of `vite` process and will be cleaned up when process exits (either by `SIGINT`, normal exit, error, etc.). However, when this option is provided, it's assumed that end user will be responsible for managing the directory, from it's creation to it's cleanup.
 
-`buildGoFile` is called when the code needs to be build. Default implementation:
+`buildGoFile` is called when the code needs to be built. Default implementation:
 https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f13d1dcdc5c7baf4e5c2/src/build.ts#L9-L46
-This option can be used to set custom build directive when much control are needed.
-
-provides a simple idiomatic, and comprehensive (soon™️) API and bindings for working with WebAssembly.
+This option can be used to set custom build directive when more control is needed.
 
 ## Dependencies
 
@@ -159,6 +172,12 @@ provides a simple idiomatic, and comprehensive (soon™️) API and bindings for
   https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f13d1dcdc5c7baf4e5c2/src/temp_dir.ts#L26-L28
 - `base64-stream` for stream base64 encoder:
   https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f13d1dcdc5c7baf4e5c2/src/build.ts#L50-L55
+
+## To-Do
+
+- [ ] Implement AST analysis for go code dependency for use in Vite HMR
+- [ ] Implement `handleHotUpdate` to allow seamless HMR instead of page reload
+- [ ] Add unit test
 
 ## License
 
