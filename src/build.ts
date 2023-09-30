@@ -1,9 +1,5 @@
-import { Base64Encode } from 'base64-stream'
 import { execFile } from 'node:child_process'
-import { createReadStream } from 'node:fs'
 import { extname, join, relative } from 'node:path'
-import { Writable } from 'node:stream'
-import { ResolvedConfig } from 'vite'
 import { GoBuilder } from './interface.js'
 
 export const buildFile: GoBuilder = (viteConfig, config, id): Promise<string> => {
@@ -41,26 +37,6 @@ export const buildFile: GoBuilder = (viteConfig, config, id): Promise<string> =>
 
     result.once("error", (err) => {
       reject(err)
-    })
-  })
-}
-
-export function base64EncodeFile(_: ResolvedConfig, filePath: string): Promise<string> {
-  let sink = ""
-  const stream = createReadStream(filePath).pipe(new Base64Encode()).pipe(new Writable({
-    write(chunk, _, callback) {
-      sink += chunk.toString()
-      callback()
-    },
-  }))
-
-  return new Promise((resolve, reject) => {
-    stream.on("error", (e) => {
-      reject(e)
-    })
-
-    stream.on("finish", () => {
-      resolve(sink)
     })
   })
 }

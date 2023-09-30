@@ -170,8 +170,6 @@ This option can be used to set custom build directive when more control is neede
 
 - `exit-hook` for catch-all solution to cleanup code, used to remove temporary directory:
   https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f13d1dcdc5c7baf4e5c2/src/temp_dir.ts#L26-L28
-- `base64-stream` for stream base64 encoder:
-  https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f13d1dcdc5c7baf4e5c2/src/build.ts#L50-L55
 
 ## To-Do
 

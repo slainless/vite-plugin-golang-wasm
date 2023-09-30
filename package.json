@@ -23,7 +23,6 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "base64-stream": "^1.0.0",
     "exit-hook": "^4.0.0"
   },
   "devDependencies": {

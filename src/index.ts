@@ -2,11 +2,12 @@ import { PluginOption, ResolvedConfig } from 'vite'
 import { basename, extname, join } from 'node:path'
 
 import { WASM_BRIDGE_ID, WASM_EXEC_ID, readFile } from './dependency.js'
+import { readFile as r } from 'node:fs/promises'
 import { createTempDir } from './temp_dir.js'
-import { base64EncodeFile, buildFile } from './build.js'
-import { Config } from './interface.js'
+import { buildFile } from './build.js'
+import type { Config } from './interface.js'
 
-export { Config, GoBuilder } from './interface.js'
+export type { Config, GoBuilder } from './interface.js'
 
 export default (config?: Config): PluginOption => {
   const finalConfig = Object.assign({} satisfies Config, config)
@@ -90,11 +91,11 @@ export default (config?: Config): PluginOption => {
           const refId = this.emitFile({
             type: "asset",
             name: basename(id, ".go") + ".wasm",
-            source: await readFile(cfg, wasmPath)
+            source: await r(wasmPath)
           })
           replacement = `fetch(import.meta.ROLLUP_FILE_URL_${refId})`
         } else {
-          replacement = `fetch("data:application/wasm;base64,${await base64EncodeFile(cfg, wasmPath)}")`
+          replacement = `fetch("data:application/wasm;base64,${await readFile(cfg, wasmPath, "base64")}")`
         }
 
         return code.replace(/fetch\(import\.meta\.ROLLUP_FILE_URL_[^\)]*\)/, replacement)
