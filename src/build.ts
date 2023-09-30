@@ -8,7 +8,7 @@ import { GoBuilder } from './interface.js'
 
 export const buildFile: GoBuilder = (viteConfig, config, id): Promise<string> => {
   const outputPath = join(config.goBuildDir as string, relative(process.cwd(), id.replace(extname(id), "") + ".wasm"))
-  const result = execFile(config.goBinaryPath as string, ["build", "-o", outputPath, id], {
+  const result = execFile(config.goBinaryPath as string, ["build", "-o", outputPath, "-target", "wasm", id], {
     cwd: process.cwd(),
     env: {
       GOPATH: process.env.GOPATH,
