@@ -1,466 +1,169 @@
-<p align="center">
-    <a href="https://github.com/teamortix/golang-wasm">
-        <img src="./banner.png">
-    </a>
-</p>
-<p align="center">A bridge and bindings for JS DOM API with Go WebAssembly.</p>
-<p align="center">Written by Team Ortix - <a href="https://github.com/hhhapz">Hamza Ali</a> and <a href="https://github.com/chanbakjsd/">Chan Wen Xu</a>.</p>
-<p align="center">
-    <a href="https://pkg.go.dev/github.com/teamortix/golang-wasm/wasm">
-        <img src="https://pkg.go.dev/badge/github.com/teamortix/golang-wasm/wasm.svg" alt="Go Reference">
-    </a>
-    <a href="https://goreportcard.com/report/github.com/teamortix/golang-wasm">
-        <img src="https://goreportcard.com/badge/github.com/teamortix/golang-wasm" alt="Go Report Card">
-    </a>
-    <br>
-    <br>
-</p>
+# vite-plugin-golang-wasm
 
+## What's this?
+
+An opinionated `vite` plugin to load and run go code as WASM, based on [Golang-WASM](https://github.com/teamortix/golang-wasm)'s implementation.
+
+## Motivation
+
+While looking up library to load Go code in my private project, I stumbled across Golang-WASM project, which is exactly what I'm looking for (shoutout to [teamortix](https://github.com/teamortix) for their great work!). Sadly, they only implemented loader for `webpack` environment, and I can't seems to find any alternative implementation in `vite` or `rollup` environment. Hence, why I created this plugin.
+
+## Usage
+
+For detailed information regarding the architecture of the bridge and bindings, please refers to [Golang-WASM#JS Interop](https://github.com/teamortix/golang-wasm#js-interop) and [Golang-WASM#How it works](https://github.com/teamortix/golang-wasm#how-it-works).
+
+For plugin usage, just import it and then register it `vite` just like usual:
+
+```ts
+// ./vite.config.ts
+import { defineConfig } from 'vite'
+import { qwikVite } from '@builder.io/qwik/optimizer'
+import goWasm from 'vite-plugin-golang-wasm'
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [
+    goWasm(),
+    qwikVite({
+      csr: true,
+    }),
+  ],
+})
 ```
-GOOS=js GOARCH=wasm go get -u github.com/teamortix/golang-wasm/wasm
-```
-```bash
-npm install golang-wasm
-```
 
-# ⚠️ The documentation is still work in progress.
+Setup go code, for example, a math code:
 
-## Why Golang-WASM?
-
-Golang-WASM provides a simple idiomatic, and comprehensive (soon™️) API and bindings for working with WebAssembly.
-
-Golang-WASM also comes with a [webpack](https://npmjs.com/golang-wasm) loader that wraps the entire API so that it is idiomatic for JavaScript developers as well as Go developers.
-
-Here is a small snippet:
 ```go
-// main.go
-// Automatically handled with Promise rejects when returning an error!
-func divide(x int, y int) (int, error) {
-    if y == 0 {
-        return 0, errors.New("cannot divide by zero")
-    }
-    return x / y, nil
+//./src/math/math.go
+package main
+
+import (
+	"errors"
+
+	"github.com/teamortix/golang-wasm/wasm"
+)
+
+func add(x int, y int) (int, error) {
+	return x + y, nil
 }
 
 func main() {
-    wasm.Expose("divide", divide)
-    wasm.Ready()
+	wasm.Expose("add", add)
+	wasm.Ready()
+	<-make(chan struct{}, 0)
 }
-```
-```js
-// index.js
-import { divide } from "main.go";
 
-const result = await divide(6, 2);
-console.log(result); // 3
-
-// Exception thrown: Unhandled rejection in promise: cannot divide by zero.
-const error = await divide(6, 0);
 ```
 
-When using the webpack loader, everything is bundled for you, and you can directly import the Go file.
+Then, import it from anywhere in the source code:
 
-> Note: the webpack loader expects you to have a valid Go installation on your system, and a valid GOROOT passed.
+```ts
+// ./src/app.tsx
+import { component$, useSignal } from '@builder.io/qwik'
+// ...
+import math from './math/math.go'
 
-## JS Interop
+export const App = component$(() => {
+  const count = useSignal(0)
 
-### Examples
-
-You can find our examples in the [examples](./example) directory.
-Currently, we have two examples available.
-
-* [basic](./example/basic): Simple usage of the API with the WASM library. This example shows automatically casting types from JS to Go, and how returning errors works.
-
-* [basic (no api)](./example/basic-noapi): A standalone example of using the JS bridge without any third party libraries in Go. Forces developers to manually type check all parameters and use the unsafe `syscall/js` directly.
-
-* (WIP) [promises](./example/promises): An example showing how Go can work with functions that call promises, and return its own promises. This example puts an emphasis on the importance of idiomatic code in both languages.
-
-* (WIP) [craco + ReactJS](./example/craco): A simple example demonstrating how Golang-WASM and React can work together, using [craco]https://github.com/gsoft-inc/craco).
-
-### Retrieving constants and values from JavaScript
-
-For more information about how Golang-WASM converts Go data to JS, read [Auto type casting](#auto-type-casting).
-
-```go
-type User struct {
-    Name     string `wasm:"name"`
-    Email    string `wasm:"emailAddr"`
-    Age      int    `wasm:"age"`
-    password string // ignored (unexported)
-}
-
-const Nothing  = nil         // Exposed as 'nothing'.
-const Username = "TeamOrtix" // exposed as username.
-const Age      = 3
-
-var hhhapz = User { // exposed as hhhapz.
-    Name:     "Hamza Ali",
-    Email:    "me (at) hamzantal dot pw",
-    Age:      17,
-    password: "wouldn't_you_like_to_know"
-}
-var goodPromise = wasm.NewPromise(func() (interface{}, error) {
-    return "success", nil
-})
-var badPromise = wasm.NewPromise(func() (interface{}, error) {
-    return nil, errors.New("failure")
+  return (
+    <>
+      // ...
+      <h1>Vite + Qwik</h1>
+      <div class="card">
+        <button
+          onClick$={async () => {
+            count.value = await math.add(count.value, 10)
+          }}
+        >
+          count is {count.value}
+        </button>
+      </div>
+      // ...
+    </>
+  )
 })
 ```
 
-```js
-import wasm from ...;
+## How it works?
 
-await wasm.nothing();  // null
-await wasm.username(); // "TeamOrtix"
-await wasm.age();      // 3
-await wasm.hhhapz();   /* {
-    name: "Hamza Ali",
-    emailAddr: "me (at) hamzantal dot pw",
-    age: 17
-} */
-await wasm.goodPromise(); // Promise(fulfilled: "success")
-await wasm.badPromise();  // Promise(rejected:  Error("failure"))
+Basically, this plugin will transform all go import into js code for wasm loading and bundle or inline the actual go (wasm) code.
+
+Here is an example of math code above transformed into a simple wasm loader:
+
+```ts
+import '/@id/__x00__virtual:wasm_exec'
+import goWasm from '/@id/__x00__virtual:wasm_bridge'
+
+const wasm = fetch('data:application/wasm;base64,...').then((r) =>
+  r.arrayBuffer()
+)
+export default goWasm(wasm)
 ```
 
-> Note: For the last two, The resulting value of calling `goodPromise` or `badPromise` will be a Promise wrapped inside a Promise.
+While the actual code are transformed into wasm and bundled (in `build` mode) or inlined (in `serve` mode).
 
-> If Go returns multiple promises embedded within each other, the stack will automatically flatten like it does in JS.
+In `build` mode, URI of the fetch is replaced with:
 
----
-
-### Working with functions
-
-When a Go function returns a value, they are handled identically to constants and variables.
-
-**⚠️ For functions that can also fail/return errors, please do not use panics!**
-
-The [working with errors](#working-with-errors) section covers how errors can be sent to JavaScript.
-
-**Brief Overview**:
-
-```go
-func ZeroParamFunc() {
-} // await call() => undefined
-
-
-func StringReturnFunc() string {
-    return "Team Ortix"
-} // await call() => "Team Ortix"
-
-
-func StringOrErrorReturnFunc() (string, error) {
-    return "Team Ortix", nil
-} // await call() => "Team Ortix"
-
-
-func FailOrNil() (error) {
-    return nil
-} // await call() => undefined
-
-
-func FailingFunc() error {
-    return errors.New("fail")
-} // await call() => Error("fail")
-
-
-func FailingFunc() (string, error) {
-    return "", errors.New("fail")
-} // await call() => fail
-
-
-func SingleParam(str string) string  {
-    return str
-}
-// await call() => Rejected Promise: Error("invalid argument passed into Go function")
-// await call("Team Ortix", "fail") => Rejected Promise: Error("invalid argument passed into Go function")
-// await call("Team Ortix") => "Team Ortix"
-
-
-func TakeAnything(v interface{}) interface{}  {
-    return v
-}
-// call(3) => 3
-// call(() => {}) => (() => {})
-// call({}) => {}
-
-
-func HigherOrderFunction(f func() string) string {
-    return f()
-}
-// await call(() => {}) // Go will panic and shut down. Higher order functions like this MUST return the same type.
-// await call("invalid") => Rejected Promise: Error("invalid argument passed into Go function")
-// await call(() => "test") => "test"
-
-
-func HigherOrderFunctionSafe(f func() (string, error)) string {
-    str, err := f()
-    if err != nil {
-        return "invalid return value!"
-    }
-    return str
-}
-// call(() => {}) => "invalid return value!"
-// call(() => "Team Ortix") => "Team Ortix"
-
-
-func FunctionThatThrows(f func()) {
-    f()
-}
-// call(() => { throw new Error("fail")}) // Go will panic in this situation.
-
-
-// Not implemented yet.
-func DidFunctionSucceed(f func() error) bool {
-    res := f()
-    return res == nil
-}
-// call(() => {}) => true
-// call(() => { throw new Error("fail") }) => false
+```ts
+const wasm = fetch(import.meta.ROLLUP_FILE_URL_...).then(r=>r.arrayBuffer());
 ```
 
-### Auto type casting
+While in `serve` mode, the code is inlined to the fetch instead:
 
-* If a `nil` value is found, it is converted to JavaScript's `null`.
-
-* For Go primitives, marshalling to JS works as one would expect.
-
-    |          Go Type          |            JS Type           |
-    |:-------------------------:|:----------------------------:|
-    |           string          |            String            |
-    |            uint           |            Number            |
-    |            int            |            Number            |
-    |           float           |            Number            |
-    |          complex          | {real: Number, imag: Number} |
-    |           Symbol          |         unimplemented        |
-    |        map[string]T       |            Object            |
-    |      [size]T (array)      |             Array            |
-    |        []T (slice)        |             Array            |
-
-* For Go structs, unexported values inside structs will NOT be marshalled.
-
-    * If a struct has a tag (with the wasm namespace), that will be used as the key.
-
-    * If two properties have the identical key, the value that is declared second in the struct deceleration will overwrite the former value.
-
-* When converting a Go Map (`map[K]V`), all keys must be a `uint`, `int` or a `string`.
-
-    * **⚠️ If a different kind of key is found, WASM will panic.**
-
-* If a pointer is found, the pointer is unwrapped till the raw value is found.
-
-* Slices and arrays are automatically converted to the JavaScript Array object.
-
-* Marshalling function parameters to Go values has slightly different functionality.
-
-    * If a function parameter is not a concrete type (`interface{}`), Go returns types in the following fashion:
-      |  JS Type  |                  Go Type                  |
-      |:---------:|:-----------------------------------------:|
-      | undefined |                    nil                    |
-      |    null   |                    nil                    |
-      |  Boolean  |                    bool                   |
-      |   Number  |                  float64                  |
-      |   String  |                   string                  |
-      |   Symbol  |               unimplemented               |
-      |   Array   |        [size]interface{} (Go array)       |
-      |   Object  |           map[string]interface{}          |
-      |  Function | func(...interface{}) (interface{}, error) |
-
-
-    * Go pointers will result in the basic value.
-
-    * Structs will be filled.
-
-        * All of the keys in the struct must be keys in the object.
-
-        * If there are keys in the object but not in the struct, they will be skipped.
-
-        * Currently, even if a struct value is a pointer to a type, the value will be nil.
-
-            * You can use this functionality for optional values in structs.
-
-    * Providing a `map[string]interface{}` will directly fill the map as expected with the keys of the object and the respective values.
-
-    * If a function parameter is a concrete type, Golang-WASM will try to convert the JS Value to the Go type using the table above.
-
-       * If the types do not match, The caller will receive a rejection promise and the function will never be called.
-
-       * Apart from `float64`, `Number` will be safely casted to all `uint` types, `int` types, and `float32`.
-
-       * Decoding into `complex64` and `complex128` is similar to when they are encoded. A JS Object with a `real` and `imag` property (type Number) are expected.
-
-
-### Working with errors
-
-* Functions can only return 0, 1, or 2 values.
-
-    * If the function's last return value is of type error, and the error is non-nil, it will reject with the provided error message.
-
-    * Functions that only return `error` will return `undefined` when `nil` as well.
-
-    * If the second return value is not `error`, Go will not call the function and instead return an error with the following message:
-
-        > a JS function can only return one value
-
-
-### DOM API
-
-Currently, little to none of the DOM-API has been implemented in Go.
-
-The goal for Golang-WASM is to eventually implement a comprehensive section of the DOM-API that will be able to be used in a type safe manner from Go.
-
-When converting the API over, Golang-WASM will make slight modifications to attempt to maintain idiomatic code when writing Go.
-
-### Promise API
-
-Here is how Go implements the Promise API:
-
-```go
-// Create a new promise and resolve or reject it, based on what the function returns.
-func ExpensiveOperation() wasm.Promise {
-    // Code is automatically called in a goroutine, similar to how JS does it.
-    return wasm.NewPromise(func() (interface{}, error) {
-        result, err := // Expensive operation.
-        if err != nil {
-            return nil, err // Reject the Promise.
-        }
-        return result, nil // Resolve the Promise.
-    })
-}
-
-// Wait for a promise to be fulfilled or rejected.
-// Note: this must be called inside a goroutine.
-// If called within the main thread, Go will deadlock and shut down.
-// out: the value that will be set when the promise is fulfilled.
-// rej: the value that will be set when the promise is rejected.
-// success: whether the promise was fulfilled (true) or rejected (false).
-promise := AnotherOperation()
-var out int
-var rej  error
-success, err := promise.Await(&out, &rej)
-if err != nil {
-    // Something went wrong with converting types or interacting with JS.
-}
-
-
-// Run multiple asynchronous operations at once and wait for them to all end.
-promise = wasm.PromiseAllSettled(ExpensiveOperation(), AnotherOperation())
-
-// If you want to make sure all are fulfilled and not rejected, you can use.
-promise = wasm.PromiseAll(ExpensiveOperation(), AnotherOperation())
-
-// Wait for any of the promises to fulfill. If none of them fulfill and all reject, this promise will also reject.
-promise = wasm.PromiseAny(ExpensiveOperation(), AnotherOperation())
-
-// Run all operations in asynchronous and return the first one to either fulfill or reject.
-promise = wasm.PromiseRace(ExpensiveOperation(), AnotherOperation())
+```ts
+const wasm = fetch(`data:application/wasm;base64,...`).then((r) =>
+  r.arrayBuffer()
+)
 ```
 
-### How it works
+The loader depends on implementation of `Golang-WASM` both on their JS interop and golang wasm package.
 
-Golang-WASM uses reflection to marshal to and from JS.
-To understand the different modules of the project, we suggest reading [ARCHITECTURE.md](./ARCHITECTURE.md).
+## Configuration
 
-The implementation of things such as throwing errors from Go and catching thrown errors in JS from Go happen through the usage of wrapper functions.
-Here is one of such functions that is wrapped when calling a JS function from Go:
-```js
-const callSafe = (f) => ((...args) => {
-     try {
-         return {result: f(...args)};
-     } catch (e) {
-      return {error: e};
-    }
+https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f13d1dcdc5c7baf4e5c2/src/interface.ts#L3-L11
+
+#### goBinaryPath, wasmExecPath
+
+By default, `goBinaryPath` and `wasmExecPath` will be resolved relative to `process.env.GOROOT` when not set, but will throw error when `GOROOT` is also not set. `GOROOT` needs to be added into OS's environment variables or set locally before running script, for example `GOROOT=/usr/bin/go vite dev`. OR, both these options can be provided to allow direct or custom go binary or `wasm_exec.js` resolving and remove dependency on env vars.
+
+For example, `tinygo` and it's `wasm_exec.js` can be used in place of normal `go` binary:
+
+```ts
+export default defineConfig({
+  plugins: [
+    goWasm({
+      goBinaryPath: '/path/to/tinygo/bin/tinygo',
+      wasmExecPath: '/path/to/tinygo/misc/wasm/wasm_exec.js',
+    }),
+    qwikVite({
+      csr: true,
+    }),
+  ],
 })
 ```
 
-Go is able to marshal this into a struct:
-```go
-type SafeCallResult struct {
-    Result js.Value `wasm:"result"`
-    Error js.Value  `wasm:"error"`
-}
-```
+#### goBuildDir, buildGoFile
 
----
+`goBuildDir` will be resolved to `os.tmpdir/go-wasm-${RANDOM_STRING}`. This option defines the directory where the output and cache of the build should be put in. By default, will create a temporary directory that lives throughout the lifecycle of `vite` process and will be cleaned up when process exiting (either by `SIGINT`, normal exit, error, etc.). However, when this option is provided, it's assumed that end user will be responsible for the directory (from creation until cleanup).
 
-## Webpack Configuration
+`buildGoFile` is called when the code needs to be build. Default implementation:
+https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f13d1dcdc5c7baf4e5c2/src/build.ts#L9-L46
+This option can be used to set custom build directive when much control are needed.
 
-See the example [basic](./example/basic/webpack.config.js) project for a full configuration.
+provides a simple idiomatic, and comprehensive (soon™️) API and bindings for working with WebAssembly.
 
-```js
-// webpack.config.js:
-module.exports = {
-    module: {
-        rules: [
-            {
-                test: /\.go$/,
-                use: [ 'golang-wasm' ]
-            }
-        ]
-    },
-    ignoreWarnings: [
-        {
-            module: /wasm_exec.js$/
-        }
-    ]
-};
-```
+## Dependencies
 
-### Hotcode Reload
-
-To ensure that hotcode reloading works, the Webpack loader expects a `go.mod` to be in the directory of the imported file, or a parent directory.
-
-Go will call `go build [directory]` where the file is imported.
-
-Given the following directory structure from this project's basic example:
-
-```ls
-basic
-├── dist
-│   └── index.html
-├── go.mod
-├── go.sum
-├── package.json
-├── package-lock.json
-├── src
-│   ├── api
-│   │   └── main.go
-│   └── index.js
-└── webpack.config.js
-```
-
-* Golang-WASM webpack will look for a `go.mod` file in `api/`, then `src/`, and then `basic`, till the root directory.
-
-    * When it finds a `go.mod`, the loader will start looking in the directory for changes to any file for hotcode reload.
-
-    * If no `go.mod` is found, the loader will fail.
-
-    * The loader runs build in the `api` directory:
-
-        > ```
-        > go build .../basic/src/api
-        > ```
-
-
-## FAQ
-
-### Is it possible to use multiple instances of Web Assembly in the same project
-
-At the moment, this is not supported.
-
-### When will the DOM API be implemented?
-
-The DOM API is expanse and large. We can't give a particular date or time. You are free to monitor our progress in this repository.
-
-
-### When will the API be stable?
-
-Once we have comprehensive tests and the confidence that the project can be used in production with reasonable stability, we will push v1.0.0 for the project.
-
-We encourage everyone to submit any errors they may come across and help us with the development process :).
+- `exit-hook` for catch-all solution to cleanup code, used to remove temporary directory:
+  https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f13d1dcdc5c7baf4e5c2/src/temp_dir.ts#L26-L28
+- `base64-stream` for stream base64 encoder:
+  https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f13d1dcdc5c7baf4e5c2/src/build.ts#L50-L55
 
 ## License
 
-**MIT**.
+**MIT**
 
 ---
-Created by [hhhapz](https://github.com/hhhapz) and [chanbakjsd](https://github.com/chanbakjsd).
+
+Created by [slainless](https://github.com/slainless)
