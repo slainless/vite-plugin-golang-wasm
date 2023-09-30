@@ -4,7 +4,12 @@
 
 An opinionated `vite` plugin to load and run Go code as WASM, based on [Golang-WASM](https://github.com/teamortix/golang-wasm)'s implementation.
 
-Compatible for `vite@^4.0.0`, `rollup@^3.0.0` and Node LTS (equivalent to `node18`, based on [`@tsconfig/node-lts/tsconfig.json`](https://github.com/tsconfig/bases/blob/main/bases/node-lts.json)).
+Compatible for:
+
+- `vite@^4.0.0`,
+- `rollup@^3.0.0`,
+- Go SDK with `GO111MODULE=on` (recommended to use 1.17 or higher),
+- and Node LTS (equivalent to `node18` or higher, based on [`@tsconfig/node-lts/tsconfig.json`](https://github.com/tsconfig/bases/blob/main/bases/node-lts.json)).
 
 ## Motivation
 
@@ -95,9 +100,11 @@ Instead, each module needs to be defined via a Typescript's declaration file. Re
 
 ```ts
 // ./math/math.go.d.ts
-export default {
-  add(x: number, y: number): Promise<number>
+const __default: {
+  add: (x: number, y: number) => Promise<number>
 }
+
+export default __default
 ```
 
 ## How it works
@@ -142,14 +149,12 @@ https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f1
 
 By default, `goBinaryPath` and `wasmExecPath` will be resolved relative to `process.env.GOROOT` if either of these options are not defined. But an error will be thrown when `GOROOT` is also not set. `GOROOT` needs to be added into OS's environment variables or set locally before running any script, for example `GOROOT=/usr/bin/go vite dev`. Alternatively, both these options can be provided to allow direct or custom `go` binary or `wasm_exec.js` resolving.
 
-For example, `tinygo` and it's `wasm_exec.js` can be used in place of normal `go` binary:
-
 ```ts
 export default defineConfig({
   plugins: [
     goWasm({
-      goBinaryPath: '/path/to/tinygo/bin/tinygo',
-      wasmExecPath: '/path/to/tinygo/misc/wasm/wasm_exec.js',
+      goBinaryPath: '/path/to/go/bin/go',
+      wasmExecPath: '/path/to/go/misc/wasm/wasm_exec.js',
     }),
     qwikVite({
       csr: true,
@@ -158,6 +163,8 @@ export default defineConfig({
 })
 ```
 
+Must be noted, however, that it's not recommended to point `goBinaryPath` to other compiler with distinct CLI usage, such as `tinygo`. Read more below as to why.
+
 #### goBuildDir, buildGoFile
 
 `goBuildDir` will be resolved to `os.tmpdir/go-wasm-${RANDOM_STRING}`. This option defines the directory where the output and cache of the build should be placed. By default, it will create a temporary directory that persist throughout the lifecycle of `vite` process and will be cleaned up when process exits (either by `SIGINT`, normal exit, error, etc.). However, when this option is provided, it's assumed that end user will be responsible for managing the directory, from it's creation to it's cleanup.
@@ -165,6 +172,10 @@ export default defineConfig({
 `buildGoFile` is called when the code needs to be built. Default implementation:
 https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f13d1dcdc5c7baf4e5c2/src/build.ts#L9-L46
 This option can be used to set custom build directive when more control is needed.
+
+To use compiler like `tinygo`, custom build function must be supplied instead of setting `goBinaryPath`, since `tinygo` CLI usage is incompatible with the default build implementation.
+
+In spite of that, I'm planning to change the build API to make it easier to modify build behaviour (e.g. custom env vars, arguments, etc.).
 
 ## Dependencies
 
