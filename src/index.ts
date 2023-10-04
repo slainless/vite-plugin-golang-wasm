@@ -25,7 +25,7 @@ export default (config?: Config): PluginOption => {
     if (process.env.GOROOT == null) {
       throw new Error("GOROOT is not set and no go binary path provided!")
     }
-    finalConfig.goBinaryPath = join(process.env.GOROOT as string, "bin", "go.exe")
+    finalConfig.goBinaryPath = join(process.env.GOROOT as string, "bin", "go")
   }
 
   return {
