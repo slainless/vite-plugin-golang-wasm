@@ -30,7 +30,7 @@ export const buildFile: GoBuilder = (viteConfig, config, id): Promise<string> =>
   return new Promise((resolve, reject) => {
     result.once("exit", (code, _) => {
       if (code !== 0) {
-        reject(new Error(`builder exit with code: ${code}`))
+        return reject(new Error(`builder exit with code: ${code}`))
       }
       resolve(outputPath)
     })
