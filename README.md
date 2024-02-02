@@ -177,6 +177,24 @@ To use compiler like `tinygo`, custom build function must be supplied instead of
 
 In spite of that, I'm planning to change the build API to make it easier to modify build behaviour (e.g. custom env vars, arguments, etc.).
 
+#### goBuildExtraArgs
+
+`goBuildExtraArgs` allows you to add extra arguments to the go build command. It can be usefull for example if your go codebase is in a subdirectory and you need to indicate to the compiler
+where is the go.mod file:
+
+```ts
+export default defineConfig({
+  plugins: [
+    goWasm({
+      goBuildExtraArgs: ["-C", "./path/to/go.mod/directory"]
+    }),
+    qwikVite({
+      csr: true,
+    }),
+  ],
+})
+```
+
 ## Dependencies
 
 - `exit-hook` for catch-all solution to cleanup code, used to remove temporary directory:

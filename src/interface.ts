@@ -4,6 +4,7 @@ export interface Config {
   wasmExecPath?: string
   goBinaryPath?: string
   goBuildDir?: string
+  goBuildExtraArgs?: string[]
 
   buildGoFile?: GoBuilder
 }
