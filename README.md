@@ -177,7 +177,7 @@ For example, you can use `tinygo` compiler instead, by pointing `goBinaryPath` t
 
 `buildGoFile` is called when the code needs to be built. Default implementation:
 
-https://github.com/slainless/vite-plugin-golang-wasm/blob/8afe0a48ac9dc1bb4b4b043576231c86ceacc1fa/src/build.ts#L9-L46
+https://github.com/slainless/vite-plugin-golang-wasm/blob/f48063ef18a79ec364244c87404cbf50c224ce16/src/build.ts#L5-L42
 
 This option can be used to set custom build directive when more control is needed.
 
