@@ -176,7 +176,9 @@ For example, you can use `tinygo` compiler instead, by pointing `goBinaryPath` t
 `goBuildDir` will be resolved to `os.tmpdir/go-wasm-${RANDOM_STRING}`. This option defines the directory where the output and cache of the build should be placed. By default, it will create a temporary directory that persist throughout the lifecycle of `vite` process and will be cleaned up when process exits (either by `SIGINT`, normal exit, error, etc.). However, when this option is provided, it's assumed that end user will be responsible for managing the directory, from it's creation to it's cleanup.
 
 `buildGoFile` is called when the code needs to be built. Default implementation:
-https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f13d1dcdc5c7baf4e5c2/src/build.ts#L9-L46
+
+https://github.com/slainless/vite-plugin-golang-wasm/blob/8afe0a48ac9dc1bb4b4b043576231c86ceacc1fa/src/build.ts#L9-L46
+
 This option can be used to set custom build directive when more control is needed.
 
 #### goBuildExtraArgs
@@ -199,7 +201,7 @@ export default defineConfig({
 ## Dependencies
 
 - `exit-hook` for catch-all solution to cleanup code, used to remove temporary directory:
-  https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f13d1dcdc5c7baf4e5c2/src/temp_dir.ts#L26-L28
+  https://github.com/slainless/vite-plugin-golang-wasm/blob/8afe0a48ac9dc1bb4b4b043576231c86ceacc1fa/src/temp_dir.ts#L26-L28
 
 ## To-Do
 
