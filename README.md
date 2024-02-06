@@ -143,7 +143,7 @@ The loader depends on implementation of `Golang-WASM` both on their JS interop a
 
 ## Configuration
 
-https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f13d1dcdc5c7baf4e5c2/src/interface.ts#L3-L11
+https://github.com/slainless/vite-plugin-golang-wasm/blob/8afe0a48ac9dc1bb4b4b043576231c86ceacc1fa/src/interface.ts#L3-L11
 
 #### goBinaryPath, wasmExecPath
 
@@ -163,24 +163,45 @@ export default defineConfig({
 })
 ```
 
-Must be noted, however, that it's not recommended to point `goBinaryPath` to other compiler with distinct CLI usage, such as `tinygo`. Read more below as to why.
+Must be noted, however, that it's not recommended to point `goBinaryPath` to other compiler with very distinct CLI usage. Specifically, the compiler must accept or support this CLI execution:
+
+```ts
+`${binary} build ${optional_extra_args} -o ${output_path} ${input_path}`
+```
+
+For example, you can use `tinygo` compiler instead, by pointing `goBinaryPath` to `tinygo` path. Other extra argument such as `--target` can be added via `goBuildExtraArgs`.
 
 #### goBuildDir, buildGoFile
 
 `goBuildDir` will be resolved to `os.tmpdir/go-wasm-${RANDOM_STRING}`. This option defines the directory where the output and cache of the build should be placed. By default, it will create a temporary directory that persist throughout the lifecycle of `vite` process and will be cleaned up when process exits (either by `SIGINT`, normal exit, error, etc.). However, when this option is provided, it's assumed that end user will be responsible for managing the directory, from it's creation to it's cleanup.
 
 `buildGoFile` is called when the code needs to be built. Default implementation:
-https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f13d1dcdc5c7baf4e5c2/src/build.ts#L9-L46
+
+https://github.com/slainless/vite-plugin-golang-wasm/blob/8afe0a48ac9dc1bb4b4b043576231c86ceacc1fa/src/build.ts#L9-L46
+
 This option can be used to set custom build directive when more control is needed.
 
-To use compiler like `tinygo`, custom build function must be supplied instead of setting `goBinaryPath`, since `tinygo` CLI usage is incompatible with the default build implementation.
+#### goBuildExtraArgs
 
-In spite of that, I'm planning to change the build API to make it easier to modify build behaviour (e.g. custom env vars, arguments, etc.).
+`goBuildExtraArgs` allows you to add extra arguments and/or flags to the build call. For example, if your go codebase is in a subdirectory and you need to indicate to the compiler where is the go.mod file, you can provide extra `-C` flag to the build call:
+
+```ts
+export default defineConfig({
+  plugins: [
+    goWasm({
+      goBuildExtraArgs: ["-C", "./path/to/go.mod/directory"]
+    }),
+    qwikVite({
+      csr: true,
+    }),
+  ],
+})
+```
 
 ## Dependencies
 
 - `exit-hook` for catch-all solution to cleanup code, used to remove temporary directory:
-  https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f13d1dcdc5c7baf4e5c2/src/temp_dir.ts#L26-L28
+  https://github.com/slainless/vite-plugin-golang-wasm/blob/8afe0a48ac9dc1bb4b4b043576231c86ceacc1fa/src/temp_dir.ts#L26-L28
 
 ## To-Do
 
