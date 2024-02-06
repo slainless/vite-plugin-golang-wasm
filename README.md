@@ -143,7 +143,7 @@ The loader depends on implementation of `Golang-WASM` both on their JS interop a
 
 ## Configuration
 
-https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f13d1dcdc5c7baf4e5c2/src/interface.ts#L3-L11
+https://github.com/slainless/vite-plugin-golang-wasm/blob/8afe0a48ac9dc1bb4b4b043576231c86ceacc1fa/src/interface.ts#L3-L11
 
 #### goBinaryPath, wasmExecPath
 
@@ -163,7 +163,13 @@ export default defineConfig({
 })
 ```
 
-Must be noted, however, that it's not recommended to point `goBinaryPath` to other compiler with distinct CLI usage, such as `tinygo`. Read more below as to why.
+Must be noted, however, that it's not recommended to point `goBinaryPath` to other compiler with very distinct CLI usage. Specifically, the compiler must accept or support this CLI execution:
+
+```ts
+`${binary} build ${optional_extra_args} -o ${output_path} ${input_path}`
+```
+
+For example, you can use `tinygo` compiler instead, by pointing `goBinaryPath` to `tinygo` path. Other extra argument such as `--target` can be added via `goBuildExtraArgs`.
 
 #### goBuildDir, buildGoFile
 
@@ -173,14 +179,9 @@ Must be noted, however, that it's not recommended to point `goBinaryPath` to oth
 https://github.com/slainless/vite-plugin-golang-wasm/blob/89a18f1a1d2e2a13e236f13d1dcdc5c7baf4e5c2/src/build.ts#L9-L46
 This option can be used to set custom build directive when more control is needed.
 
-To use compiler like `tinygo`, custom build function must be supplied instead of setting `goBinaryPath`, since `tinygo` CLI usage is incompatible with the default build implementation.
-
-In spite of that, I'm planning to change the build API to make it easier to modify build behaviour (e.g. custom env vars, arguments, etc.).
-
 #### goBuildExtraArgs
 
-`goBuildExtraArgs` allows you to add extra arguments to the go build command. It can be usefull for example if your go codebase is in a subdirectory and you need to indicate to the compiler
-where is the go.mod file:
+`goBuildExtraArgs` allows you to add extra arguments and/or flags to the build call. For example, if your go codebase is in a subdirectory and you need to indicate to the compiler where is the go.mod file, you can provide extra `-C` flag to the build call:
 
 ```ts
 export default defineConfig({
