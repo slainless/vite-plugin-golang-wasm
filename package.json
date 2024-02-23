@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-golang-wasm",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Vite plugin that handles golang codes, based on Golang-WASM implementations",
   "type": "module",
   "repository": {
