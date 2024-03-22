@@ -8,7 +8,7 @@ Compatible for:
 
 - `vite@^4.0.0`,
 - `rollup@^3.0.0`,
-- Go SDK with `GO111MODULE=on` (recommended to use 1.17 or higher),
+- Go with `GO111MODULE=on` (recommended to use 1.17 or higher),
 - and Node LTS (equivalent to `node18` or higher, based on [`@tsconfig/node-lts/tsconfig.json`](https://github.com/tsconfig/bases/blob/main/bases/node-lts.json)).
 
 ## Motivation
