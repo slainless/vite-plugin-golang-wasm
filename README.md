@@ -38,6 +38,8 @@ export default defineConfig({
 })
 ```
 
+> ⚠️ ATTENTION: Entrypoint's package must be `main` or it will fail to load. See [go/wiki/WebAssembly](https://github.com/golang/go/wiki/WebAssembly#:~:text=Note%20that%20you%20can%20only%20compile%20main%20packages.%20Otherwise%2C%20you%20will%20get%20an%20object%20file%20that%20cannot%20be%20run%20in%20WebAssembly.%20If%20you%20have%20a%20package%20that%20you%20want%20to%20be%20able%20to%20use%20with%20WebAssembly%2C%20convert%20it%20to%20a%20main%20package%20and%20build%20a%20binary.), https://github.com/golang/go/issues/35657#issuecomment-554904779.
+
 Create a Go code, for example, a math code:
 
 ```go
