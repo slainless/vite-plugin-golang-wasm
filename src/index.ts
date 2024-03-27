@@ -56,7 +56,7 @@ export default (config?: Config): PluginOption => {
       }
 
       if (id == `\0${WASM_BRIDGE_ID}`) {
-        const base = import.meta.url != null ? new URL('../src/bridge.js', import.meta.url) : join(__filename, "..", "src", "bridge.js")
+        const base = import.meta.url != null ? new URL('artifact/bridge.js', import.meta.url) : join(__filename, "artifact/bridge.js")
         return {
           code: await readFile(cfg, base),
           moduleSideEffects: "no-treeshake"

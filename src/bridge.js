@@ -23,6 +23,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. 
 */
 
+import raf from 'raf'
+raf.polyfill()
+
 // Initially, the __go_wasm__ object will be an empty object.
 const g =
   typeof global != 'undefined'
