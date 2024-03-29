@@ -1,4 +1,4 @@
-import { PluginOption, ResolvedConfig } from 'vite'
+import type { PluginOption, ResolvedConfig } from 'vite'
 import { basename, extname, join } from 'node:path'
 
 import { WASM_BRIDGE_ID, WASM_EXEC_ID, readFile } from './dependency.js'
@@ -9,7 +9,7 @@ import type { Config } from './interface.js'
 
 export type { Config, GoBuilder } from './interface.js'
 
-export default (config?: Config): PluginOption => {
+export default (config?: Config) => {
   const finalConfig = Object.assign({} satisfies Config, config)
 
   let cfg: ResolvedConfig
@@ -29,11 +29,11 @@ export default (config?: Config): PluginOption => {
   }
 
   return {
-    name: "golang-wasm",
-    configResolved(c) {
+    name: "golang-wasm" as const,
+    configResolved(c: any) {
       cfg = c
     },
-    async resolveId(source, _, __) {
+    async resolveId(source) {
       if (source == WASM_EXEC_ID) {
         return `\0${WASM_EXEC_ID}`
       }
@@ -42,12 +42,12 @@ export default (config?: Config): PluginOption => {
         return `\0${WASM_BRIDGE_ID}`
       }
     },
-    async options(_) {
+    async options() {
       if (finalConfig.goBuildDir == null) {
         finalConfig.goBuildDir = await createTempDir(cfg)
       }
     },
-    async load(id, _) {
+    async load(id) {
       if (id == `\0${WASM_EXEC_ID}`) {
         return {
           code: await readFile(cfg, finalConfig.wasmExecPath as string),
@@ -76,7 +76,7 @@ export default (config?: Config): PluginOption => {
         export default goWasm(wasm);
       `
     },
-    async transform(code, id, _) {
+    async transform(code, id) {
       // skip if not loading go
       if (extname(id) != ".go") {
         return
@@ -107,6 +107,5 @@ export default (config?: Config): PluginOption => {
 
       return
     },
-  }
-
+  } satisfies PluginOption
 }

@@ -7,7 +7,7 @@ An opinionated `vite` plugin to load and run Go code as WASM, based on [Golang-W
 Compatible for:
 
 - [ESM-only environment](https://gist.github.com/sindresorhus/a39789f98801d908bbc7ff3ecc99d99c)
-- `vite: ^4.0.0`,
+- `vite: ^4.0.0 || ^5.0.0`,
 - `rollup: ^3.0.0`,
 - Go with `GO111MODULE=on` (recommended to use 1.17 or higher),
 - and Node LTS (equivalent to `node18` or higher, based on [`@tsconfig/node-lts/tsconfig.json`](https://github.com/tsconfig/bases/blob/main/bases/node-lts.json)).
