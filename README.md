@@ -6,14 +6,22 @@ An opinionated `vite` plugin to load and run Go code as WASM, based on [Golang-W
 
 Compatible for:
 
-- `vite@^4.0.0`,
-- `rollup@^3.0.0`,
+- [ESM-only environment](https://gist.github.com/sindresorhus/a39789f98801d908bbc7ff3ecc99d99c)
+- `vite: ^4.0.0`,
+- `rollup: ^3.0.0`,
 - Go with `GO111MODULE=on` (recommended to use 1.17 or higher),
 - and Node LTS (equivalent to `node18` or higher, based on [`@tsconfig/node-lts/tsconfig.json`](https://github.com/tsconfig/bases/blob/main/bases/node-lts.json)).
 
 ## Motivation
 
 While I was looking up for a library to load Go code in my private project, I came across `Golang-WASM` project, which is exactly what I'm looking for (shoutout to [teamortix](https://github.com/teamortix) for their great work!). Unfortunately, they have only implemented a loader for `webpack` environment, and I couldn't find any alternative implementations for `vite` or `rollup` environment. Hence, why I created this plugin.
+
+## Bridge implementation difference
+
+Aside from difference of tooling usage, this package also differs in it's bridge implementation (albeit, preserving majority of the implementation):
+
+- Proper global context handling. Original implementation will almost guaranteed to throw when `global` is not defined.
+- Forced polyfilling of `requestAnimationFrame` to allow bridge usage on SSR (server) environment such as Node.js, Deno, Bun, Cloud environments (Worker or Lambda, not tested yet though), etc.
 
 ## Usage
 

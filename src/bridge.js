@@ -28,13 +28,20 @@ raf.polyfill()
 
 // Initially, the __go_wasm__ object will be an empty object.
 const g =
-  typeof global != 'undefined'
-    ? global
+  typeof globalThis != 'undefined'
+    ? globalThis
     : typeof window != 'undefined'
     ? window
-    : typeof self != 'undefined'
+    : typeof global != 'undefined' 
+    ? global
+    : typeof self != 'undefined' 
     ? self
     : undefined
+
+if(g == null) {
+  throw new Error("Cannot find global context for this runtime environment")
+}
+
 if (!g.__go_wasm__) {
   g.__go_wasm__ = {}
 }
