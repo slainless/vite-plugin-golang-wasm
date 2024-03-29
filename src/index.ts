@@ -1,4 +1,5 @@
 import type { PluginOption, ResolvedConfig } from 'vite'
+import type { EmittedAsset, EmittedFile, LoadResult, SourceDescription, TransformPluginContext } from 'rollup'
 import { basename, extname, join } from 'node:path'
 
 import { WASM_BRIDGE_ID, WASM_EXEC_ID, readFile } from './dependency.js'
@@ -33,7 +34,7 @@ export default (config?: Config) => {
     configResolved(c: any) {
       cfg = c
     },
-    async resolveId(source) {
+    async resolveId(this: any, source): Promise<string | undefined> {
       if (source == WASM_EXEC_ID) {
         return `\0${WASM_EXEC_ID}`
       }
@@ -42,12 +43,12 @@ export default (config?: Config) => {
         return `\0${WASM_BRIDGE_ID}`
       }
     },
-    async options() {
+    async options(this: any) {
       if (finalConfig.goBuildDir == null) {
         finalConfig.goBuildDir = await createTempDir(cfg)
       }
     },
-    async load(id) {
+    async load(this: any, id): Promise<string | Pick<SourceDescription, "code" | "moduleSideEffects"> | undefined> {
       if (id == `\0${WASM_EXEC_ID}`) {
         return {
           code: await readFile(cfg, finalConfig.wasmExecPath as string),
@@ -76,7 +77,7 @@ export default (config?: Config) => {
         export default goWasm(wasm);
       `
     },
-    async transform(code, id) {
+    async transform(this: any, code, id): Promise<string | undefined> {
       // skip if not loading go
       if (extname(id) != ".go") {
         return
@@ -88,7 +89,7 @@ export default (config?: Config) => {
         let replacement: string
 
         if (cfg.command == "build") {
-          const refId = this.emitFile({
+          const refId = (this.emitFile as TransformPluginContext['emitFile'])({
             type: "asset",
             name: basename(id, ".go") + ".wasm",
             source: await r(wasmPath)
