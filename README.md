@@ -21,7 +21,8 @@ While I was looking up for a library to load Go code in my private project, I ca
 Aside from difference of tooling usage, this package also differs in it's bridge implementation (albeit, preserving majority of the implementation):
 
 - Proper global context handling. Original implementation will almost guaranteed to throw when `global` is not defined.
-- Forced polyfilling of `requestAnimationFrame` to allow bridge usage on SSR (server) environment such as Node.js, Deno, Bun, Cloud environments (Worker or Lambda, not tested yet though), etc.
+- Proxied only function calls.
+- Moved readiness check from function call into initiation.
 
 ## Usage
 
@@ -119,29 +120,27 @@ export default __default
 
 ## How it works
 
-Essentially, this plugin will transform each "imported" Go file into JS code which only contains codes for loading WASM, while the actual Go codes are bundled or inlined.
-
-Here is an example of math code above transformed into a simple WASM loader:
+Essentially, this plugin will transform each "imported" Go file into JS code which only contains codes for loading WASM. By default, the code will be bundled (as asset) or inlined (as base64 data) and then loaded via fetch call:
 
 ```ts
 import '/@id/__x00__virtual:wasm_exec'
 import goWasm from '/@id/__x00__virtual:wasm_bridge'
 
-const wasm = fetch('data:application/wasm;base64,...').then((r) =>
+const wasm = fetch(`${ data }`).then((r) =>
   r.arrayBuffer()
 )
 export default goWasm(wasm)
 ```
 
-While the actual code are transformed into WASM and bundled (in `build` mode) or inlined (in `serve` mode).
+In default setup, the actual code are transformed into WASM and will be emitted as asset (in `build` mode) or inlined (in `serve` mode). The resulting asset or resulting inlined code (in base64 format) can then be imported or loaded via `fetch` call
 
-In `build` mode, the compiled Go is emitted as asset, returning the reference ID. The reference ID will be used in URI of the fetch to load it:
+Loaded as an asset (default setup, `build`):
 
 ```ts
 const wasm = fetch(import.meta.ROLLUP_FILE_URL_{REFERENCE_ID}).then(r=>r.arrayBuffer());
 ```
 
-While in `serve` mode, the code is inlined to the fetch instead:
+Loaded as base64 data (default setup, `serve`):
 
 ```ts
 const wasm = fetch(`data:application/wasm;base64,{BASE_64_ENCODED_CODE}`).then(
@@ -149,7 +148,29 @@ const wasm = fetch(`data:application/wasm;base64,{BASE_64_ENCODED_CODE}`).then(
 )
 ```
 
-The loader depends on implementation of `Golang-WASM` both on their JS interop and Golang WASM package.
+You can change the output of the Go-loading JS code using plugin's option: `transform`. For example, you can modify the transformation process to always emit the Go code:
+
+```ts
+...
+import { WASM_EXEC_ID, WASM_BRIDGE_ID } from 'vite-plugin-golang-wasm'
+
+export default defineConfig({
+  plugins: [
+    goWasm({
+      async transform(command, emit, read) {
+        return `
+          import '${WASM_EXEC_ID}';
+          import goWasm from '${WASM_BRIDGE_ID}';
+          
+          const wasm = fetch(import.meta.ROLLUP_FILE_URL_${await emit()}).then(r => r.arrayBuffer());
+          export default await goWasm(wasm);
+        `
+      }
+    }),
+    ...
+  ],
+})
+```
 
 ## Configuration
 
@@ -207,6 +228,41 @@ export default defineConfig({
   ],
 })
 ```
+
+#### transform
+
+`transform` allows you to modify the transformation process of this plugin. This option expecting signature:
+
+```ts
+(command: "build" | "serve", emit: () => Promise<string>, read: () => Promise<Buffer>) => Promise<string | undefined>
+```
+
+- `command`: Taken directly from Vite runtime. Can be `command` or `serve`.
+- `emit`: Returns asset ID of the emitted go code. To make use of this ID, you have to prepend it with `import.meta.ROLLUP_FILE_URL_`. Then, you can load it via `fetch` or import it via `import` (need more tweaking to make the path acceptable).
+
+```ts
+fetch("import.meta.ROLLUP_FILE_URL_" + await emit())
+```
+
+- `read`: Returns the contents of the file in `Buffer`. You can use `read` to load the file directly and inlined it into the resulting js file, for example: 
+
+```ts
+fetch("data:application/wasm;base64," + Buffer.from(await read()).toString("base64"))
+```
+
+For example, in Cloudflare Worker environment, you can actually import wasm code directly via import syntax. So, you can give custom `transform` directive to load the wasm as asset instead of inlining it, and using import instead of fetch:
+
+```ts
+  return `
+    import '${WASM_EXEC_ID}';
+    import goWasm from '${WASM_BRIDGE_ID}';
+    
+    const wasm = await import("./" + "import.meta.ROLLUP_FILE_URL_" + await emit());
+    export default await goWasm(wasm);
+  `
+```
+
+Aside from transforming how the code loading, you can also use `transform` to provide or load your own bridge implementation or even exec implementation. Just don't import `WASM_EXEC_ID` or `WASM_BRIDGE_ID` and you can eject into your own implementation. 
 
 ## Dependencies
 

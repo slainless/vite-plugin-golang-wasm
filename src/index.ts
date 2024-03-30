@@ -10,6 +10,8 @@ import type { Config } from './interface.js'
 
 export type { Config, GoBuilder } from './interface.js'
 
+export { WASM_BRIDGE_ID, WASM_EXEC_ID } from './dependency.js'
+
 export default (config?: Config) => {
   const finalConfig = Object.assign({} satisfies Config, config)
 
@@ -69,13 +71,8 @@ export default (config?: Config) => {
         return
       }
 
-      return `
-        import '${WASM_EXEC_ID}';
-        import goWasm from '${WASM_BRIDGE_ID}';
-        
-        const wasm = fetch(import.meta.ROLLUP_FILE_URL_).then(r => r.arrayBuffer());
-        export default await goWasm(wasm);
-      `
+      // intentionally left empty
+      return ``
     },
     async transform(this: any, code, id): Promise<string | undefined> {
       // skip if not loading go
@@ -86,20 +83,28 @@ export default (config?: Config) => {
       const builder = finalConfig.buildGoFile != null ? finalConfig.buildGoFile : buildFile
       try {
         const wasmPath = await builder(cfg, finalConfig, id)
-        let replacement: string
+        const emit = async () => (this.emitFile as TransformPluginContext['emitFile'])({
+          type: "asset",
+          name: basename(id, ".go") + ".wasm",
+          source: await r(wasmPath)
+        })
+        const read = async () => readFile(cfg, wasmPath, undefined) as unknown as Buffer
 
-        if (cfg.command == "build") {
-          const refId = (this.emitFile as TransformPluginContext['emitFile'])({
-            type: "asset",
-            name: basename(id, ".go") + ".wasm",
-            source: await r(wasmPath)
-          })
-          replacement = `fetch(import.meta.ROLLUP_FILE_URL_${refId})`
-        } else {
-          replacement = `fetch("data:application/wasm;base64,${await readFile(cfg, wasmPath, "base64")}")`
+        if(config?.transform != null) {
+          return config.transform(cfg.command, emit, read)
         }
 
-        return code.replace(/fetch\(import\.meta\.ROLLUP_FILE_URL_[^\)]*\)/, replacement)
+        const content = cfg.command == 'build' ? 
+          `import.meta.ROLLUP_FILE_URL_` + await emit() :
+          `data:application/wasm;base64,` + Buffer.from(await read()).toString("base64")
+
+        return `
+          import '${WASM_EXEC_ID}';
+          import goWasm from '${WASM_BRIDGE_ID}';
+          
+          const wasm = fetch(${content}).then(r => r.arrayBuffer());
+          export default await goWasm(wasm);
+        `
       } catch (e) {
         cfg.logger.error(`fail to build wasm for: ${id}`, {
           error: e as Error
