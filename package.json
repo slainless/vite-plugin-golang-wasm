@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-golang-wasm",
-  "version": "0.1.8",
+  "version": "0.1.9-vite-v5-support",
   "description": "Vite plugin that handles golang codes, based on Golang-WASM implementations",
   "type": "module",
   "repository": {
@@ -29,7 +29,6 @@
     "@tsconfig/node-lts": "^18.12.5",
     "@types/node": "^20.7.1",
     "esbuild": "^0.20.2",
-    "raf": "^3.4.1",
     "rimraf": "^5.0.5",
     "rollup": "^3.0.0",
     "typescript": "^5.2.2",
@@ -40,7 +39,7 @@
   },
   "scripts": {
     "build": "rimraf dist && tsc && npm run build:bridge",
-    "build:bridge": "esbuild src/bridge.js --bundle --outfile=dist/artifact/bridge.js --format=esm"
+    "build:bridge": "esbuild src/bridge.ts --bundle --outfile=dist/artifact/bridge.js --format=esm"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts"

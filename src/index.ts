@@ -1,5 +1,5 @@
 import type { PluginOption, ResolvedConfig } from 'vite'
-import type { EmittedAsset, EmittedFile, LoadResult, SourceDescription, TransformPluginContext } from 'rollup'
+import type { SourceDescription, TransformPluginContext } from 'rollup'
 import { basename, extname, join } from 'node:path'
 
 import { WASM_BRIDGE_ID, WASM_EXEC_ID, readFile } from './dependency.js'
@@ -74,7 +74,7 @@ export default (config?: Config) => {
         import goWasm from '${WASM_BRIDGE_ID}';
         
         const wasm = fetch(import.meta.ROLLUP_FILE_URL_).then(r => r.arrayBuffer());
-        export default goWasm(wasm);
+        export default await goWasm(wasm);
       `
     },
     async transform(this: any, code, id): Promise<string | undefined> {
